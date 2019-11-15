@@ -1,5 +1,5 @@
 version: '{branch}-{build}'
-skip_non_tags: false
+skip_non_tags: true
 platform:
 - x86
 - x64
@@ -7,15 +7,23 @@ init:
 - cmd: IF %APPVEYOR_REPO_TAG%==true appveyor UpdateBuild -Version %APPVEYOR_REPO_TAG_NAME%-%APPVEYOR_BUILD_NUMBER%
 before_build:
 - cmd: >-
-    FOR %%I IN (https://web.archive.org/web/20110722120922/http://download.microsoft.com/download/4/7/2/47291d3a-b5b5-4447-8182-4b72b505a603/4918.exe) DO curl -fsS -o %%~nxI %%I
+    IF %APPVEYOR_REPO_TAG_NAME%==4.00 FOR %%I IN (https://web.archive.org/web/20110722120922/http://download.microsoft.com/download/4/7/2/47291d3a-b5b5-4447-8182-4b72b505a603/4918.exe) DO curl -fsS -o %%~nxI %%I
 
-    7z e *.exe
+    IF %APPVEYOR_REPO_TAG_NAME%==4.11 curl -fsS -o mttty.zip "https://web.archive.org/web/20191114075942/https://www.netburner.com/download/mttty-download/?wpdmdl=4555&ind=1539519763381"
 
-    IF %APPVEYOR_REPO_TAG%==true git checkout v%APPVEYOR_REPO_TAG_NAME%
+    FOR %%I IN (*.exe *.zip) DO 7z e %%I
+
+    DEL /Q *.zip
 build_script:
-- cmd: build.bat
+- cmd: >-
+    IF %APPVEYOR_REPO_TAG_NAME%==4.00 build.bat
+
+    IF %APPVEYOR_REPO_TAG_NAME%==4.11 C:\msys64\usr\bin\sed.exe -b 's@MSVCR71.dll@msvcrt.dll\x00@' -i *.exe
 after_build:
-- cmd: 7z a mttty-%Platform%.zip *.exe -x!4918.exe
+- cmd: >-
+    7z a mttty-%Platform%.zip *.exe -x!4918.exe
+
+    IF %APPVEYOR_REPO_TAG_NAME%==4.11 IF %Platform%==x64 DEL /Q *.zip
 artifacts:
 - path: '*.zip'
   name: mttty
